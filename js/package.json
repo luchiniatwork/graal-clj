@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "xstate": "^4.32.1"
+  },
+  "devDependencies": {
+    "webpack-cli": "^4.9.2"
+  }
+}
