@@ -1,0 +1,11 @@
+{:paths ["src"]
+ :aliases {:depstar
+           {:replace-deps
+            {com.github.seancorfield/depstar {:mvn/version "2.0.206"}}
+            :ns-default hf.depstar
+            :exec-fn hf.depstar/uberjar
+            :exec-args {
+                        :jar app.jar
+                        :aot true
+                        :compile-ns [my.app]
+                        :main-class "my.app"}}}}
