@@ -1,10 +1,11 @@
-(ns polyglot.core
+(ns graal-clj.core
   (:refer-clojure :exclude [promise resolve eval])
   (:import (clojure.lang IFn)
            (java.util.function Consumer)
            (org.graalvm.polyglot Context
                                  Context$Builder
-                                 Value)
+                                 Value
+                                 Source)
            (org.graalvm.polyglot.proxy ProxyArray
                                        ProxyExecutable
                                        ProxyObject)))
@@ -125,14 +126,14 @@
 (defmacro with-context [bindings & body]
   `(with-open ~bindings ~@body))
 
-(defn get-member [^String lang ^Context ctx ^String id]
+(defn get-member [^Context ctx ^String lang ^String id]
   ^Value (.getMember (.getBindings ctx lang) id))
 
-(defn put-member [^String lang ^Context ctx ^String id x]
+(defn put-member [^Context ctx ^String lang ^String id x]
   (.putMember (.getBindings ctx lang) id x))
 
-(defn eval [^String lang ctx code]
-  ^Value (.eval ^Context ctx lang code))
+(defn eval [^Context ctx ^String lang ^String code]
+  ^Value (.eval ctx lang code))
 
-(defn eval-parse [^String lang ctx code]
-  (value->clj (eval lang ctx code)))
+(defn eval-parse [^Context ctx ^String lang ^String code]
+  (value->clj (eval ctx lang code)))

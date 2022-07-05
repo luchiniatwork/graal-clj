@@ -1,5 +1,5 @@
-(ns polyglot.buffered-out-test
-  (:require [polyglot.core :as core]
+(ns graal-clj.buffered-out-test
+  (:require [graal-clj.core :as core]
             [clojure.test :refer :all])
   (:import (org.graalvm.polyglot Context)
            (java.io ByteArrayOutputStream)))
@@ -18,7 +18,7 @@
                                core/apply-builder-defaults))]
       (binding [*context* ctx
                 *context-out* out-stream
-                *eval-parse* (partial core/eval-parse "js" ctx)]
+                *eval-parse* (partial core/eval-parse ctx "js")]
         (f)))))
 
 (use-fixtures :each context-fixture)
@@ -26,8 +26,8 @@
 
 (deftest promises
   (testing "promise excuction in clj"
-    (core/put-member "js"
-                     *context*
+    (core/put-member *context*
+                     "js"
                      "myPromise"
                      (core/proxy-fn (fn [resolve reject]
                                       (resolve 42))))
@@ -36,8 +36,8 @@
 
   (testing "promise treatment in clj"
     (let [result (atom 0)]
-      (core/put-member "js"
-                       *context*
+      (core/put-member *context*
+                       "js"
                        "myThen"
                        (core/proxy-fn (fn [v] (reset! result (* 2 v)))))
       (*eval-parse* "Promise.resolve(42).then(myThen);")
@@ -46,8 +46,8 @@
 
 (deftest async-fn
   (testing "calling clj async function from js"
-    (core/put-member "js"
-                     *context*
+    (core/put-member *context*
+                     "js"
                      "myAsync"
                      (core/async-fn (fn [resolve reject]
                                       (resolve (range 5)))))

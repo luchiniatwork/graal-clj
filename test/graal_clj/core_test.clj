@@ -1,5 +1,5 @@
-(ns polyglot.core-test
-  (:require [polyglot.core :as core]
+(ns graal-clj.core-test
+  (:require [graal-clj.core :as core]
             [clojure.test :refer :all]))
 
 (def ^:dynamic *eval-parse* (constantly true))
@@ -9,7 +9,7 @@
 (defn context-fixture [f]
   (core/with-context [ctx (core/create-context "js")]
     (binding [*context* ctx
-              *eval-parse* (partial core/eval-parse "js" ctx)]
+              *eval-parse* (partial core/eval-parse ctx "js")]
       (f))))
 
 (use-fixtures :each context-fixture)
