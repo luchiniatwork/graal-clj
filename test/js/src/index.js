@@ -1,4 +1,4 @@
-// import bar from './bar.js';
+import { bar } from './bar.js';
 import { createMachine, interpret } from 'xstate';
 
 const promiseMachine = createMachine({
@@ -31,4 +31,4 @@ promiseService.start();
 promiseService.send({ type: 'RESOLVE' });
 // => 'resolved'
 
-// bar();
+bar();

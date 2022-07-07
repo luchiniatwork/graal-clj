@@ -26,8 +26,7 @@
 
 (deftest promises
   (testing "promise excuction in clj"
-    (core/put-member *context*
-                     "js"
+    (core/put-member (core/get-bindings *context* "js")
                      "myPromise"
                      (core/proxy-fn (fn [resolve reject]
                                       (resolve 42))))
@@ -36,8 +35,7 @@
 
   (testing "promise treatment in clj"
     (let [result (atom 0)]
-      (core/put-member *context*
-                       "js"
+      (core/put-member (core/get-bindings *context* "js")
                        "myThen"
                        (core/proxy-fn (fn [v] (reset! result (* 2 v)))))
       (*eval-parse* "Promise.resolve(42).then(myThen);")
@@ -46,8 +44,7 @@
 
 (deftest async-fn
   (testing "calling clj async function from js"
-    (core/put-member *context*
-                     "js"
+    (core/put-member (core/get-bindings *context* "js")
                      "myAsync"
                      (core/async-fn (fn [resolve reject]
                                       (resolve (range 5)))))

@@ -1,16 +1,33 @@
 (ns graal-clj.core-test
   (:require [graal-clj.core :as core]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all])
+  (:import (java.io ByteArrayOutputStream)
+           (org.graalvm.polyglot Context)))
 
 (def ^:dynamic *eval-parse* (constantly true))
 
+(def ^:dynamic *eval-parse-cap-stdout* (constantly true))
+
 (def ^:dynamic *context* nil)
 
+(def ^:dynamic *context-cap-stdout* nil)
+
+(def ^:dynamic *context-stout* nil)
+
 (defn context-fixture [f]
-  (core/with-context [ctx (core/create-context "js")]
-    (binding [*context* ctx
-              *eval-parse* (partial core/eval-parse ctx "js")]
-      (f))))
+  (let [out-stream (ByteArrayOutputStream.)]
+    (core/with-context [ctx (core/create-context "js")
+                        ctx-cap-stdout (core/context-from-builder
+                                        (doto (Context/newBuilder (into-array ["js"]))
+                                          (.out out-stream)
+                                          (core/apply-builder-defaults {"js.commonjs-require-cwd"      "test/js"})))]
+
+      (binding [*context* ctx
+                *context-cap-stdout* ctx-cap-stdout
+                *context-stout* out-stream
+                *eval-parse* (partial core/eval-parse ctx "js")
+                *eval-parse-cap-stdout* (partial core/eval-parse ctx-cap-stdout "js")]
+        (f)))))
 
 (use-fixtures :each context-fixture)
 
@@ -160,3 +177,97 @@ var myArray = [4, 5, 6];
     (is (= [1 2 3 0 1 2 5 5 5]
            (do (log-coll (repeatedly 3 (constantly 5)))
                (*eval-parse* "myArray"))))))
+
+
+(deftest bindings-and-members
+  (let [top-level (core/get-bindings *context-cap-stdout* "js")]
+    ;; no list
+    (is (= []
+           (core/member-keys top-level)))
+    ;; a doesn't exist
+    (is (= false
+           (core/has-member? top-level "a")))
+
+    ;; add a
+    (*eval-parse-cap-stdout* "const a = {\"foo\":5, \"bar\":null}; const b = 2;")
+
+    ;; top level now has members
+    (is (= true
+           (core/has-members? top-level)))
+    ;; member a now exists
+    (is (= true
+           (core/has-member? top-level "a")))
+    ;; you can list a and b
+    (is (= ["a" "b"]
+           (core/member-keys top-level)))
+
+    ;; a has its own submembers
+    (is (= true
+           (-> top-level
+               (core/get-member "a")
+               core/has-members?)))
+    ;; a.foo is 5
+    (is (= 5
+           (-> top-level
+               (core/get-member-in ["a" "foo"])
+               core/value->clj)))
+
+    ;; b does not have submembers
+    (is (= false
+           (-> top-level
+               (core/get-member "b")
+               core/has-members?)))
+
+    ;; a looks like it should
+    (is (= {"foo" 5 "bar" nil}
+           (-> top-level
+               (core/get-member "a")
+               core/value->clj)))
+
+    ;; set c
+    (core/put-member top-level "c" 42)
+    ;; you can list a and b and c
+    (is (= ["a" "b" "c"]
+           (core/member-keys top-level)))
+    ;; c is 42
+    (is (= 42
+           (-> top-level
+               (core/get-member "c")
+               core/value->clj)))))
+
+
+(deftest use-source-and-npm-packages
+  (testing "sourcing a file"
+    (let [doubler (->> "test/js/src/doubler.js"
+                       core/source
+                       (core/eval-parse *context-cap-stdout*))]
+      (is (= 12 (doubler 6)))))
+
+  (testing "can see global sourced above"
+    (is (= true (-> *context-cap-stdout*
+                    (core/get-bindings "js")
+                    (core/has-member? "fooBar"))))
+    (is (= {"foo" "bar"}
+           (-> *context-cap-stdout*
+               (core/get-bindings "js")
+               (core/get-member "fooBar")
+               core/value->clj))))
+
+  (testing "sourcing a bundle that also uses a library"
+    (->> "test/js/dist/bundle.js"
+         core/source
+         (core/eval-parse *context-cap-stdout*))
+    (*eval-parse-cap-stdout* "const a = 5;")
+    (is (= "pending\nresolved\nHello World!\n"
+           (.toString *context-stout*))))
+
+  (testing "loading npm packages"
+    (*eval-parse-cap-stdout* "
+const _ = require('lodash');")
+    (let [top-level (core/get-bindings *context-cap-stdout* "js")
+          f (-> top-level
+                (core/get-member-in ["_" "partition"])
+                core/value->clj)]
+      (is (= [[1 3 5 7 9] [0 2 4 6 8]]
+             (f (range 10)
+                (core/proxy-fn odd?)))))))

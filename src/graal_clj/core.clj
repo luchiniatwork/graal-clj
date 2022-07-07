@@ -1,5 +1,6 @@
 (ns graal-clj.core
   (:refer-clojure :exclude [promise resolve eval])
+  (:require [clojure.java.io :as io])
   (:import (clojure.lang IFn)
            (java.util.function Consumer)
            (org.graalvm.polyglot Context
@@ -11,6 +12,11 @@
                                        ProxyObject)))
 
 (set! *warn-on-reflection* true)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Core functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn clj->params [v]
   (cond
@@ -36,7 +42,7 @@
     
     :else v))
 
-(defn- execute
+(defn ^:private execute
   [^Value execable & args]
   (.execute execable (object-array (map clj->params args))))
 
@@ -94,8 +100,15 @@
                             [k (value->clj (.getMember v k))]))
     :else (throw (Exception. "Unsupported value"))))
 
-(def ^:private default-options
-  {"js.interop-complete-promises" "true"})
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Context functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def default-options
+  {"js.interop-complete-promises" "true"
+   "js.commonjs-require"          "true"
+   "js.commonjs-require-cwd"      "."})
 
 (defn context-from-builder [^Context$Builder builder]
   ^Context (.build builder))
@@ -126,14 +139,65 @@
 (defmacro with-context [bindings & body]
   `(with-open ~bindings ~@body))
 
-(defn get-member [^Context ctx ^String lang ^String id]
-  ^Value (.getMember (.getBindings ctx lang) id))
 
-(defn put-member [^Context ctx ^String lang ^String id x]
-  (.putMember (.getBindings ctx lang) id x))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Bindings and members functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn eval [^Context ctx ^String lang ^String code]
-  ^Value (.eval ctx lang code))
+(defn get-bindings [^Context ctx ^String lang]
+  ^Value (.getBindings ctx lang))
 
-(defn eval-parse [^Context ctx ^String lang ^String code]
-  (value->clj (eval ctx lang code)))
+(defn has-members? [^Value v]
+  (.hasMembers v))
+
+(defn has-member? [^Value v ^String id]
+  (.hasMember v id))
+
+(defn member-keys [^Value v]
+  (vec (.getMemberKeys v)))
+
+(defn get-member
+  [^Value v ^String id]
+  ^Value (.getMember v id))
+
+(defn get-member-in [^Value v coll]
+  (reduce (fn [a i]
+            (get-member a i))
+          v coll))
+
+(defn put-member [^Value v ^String id x]
+  (.putMember v id x))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Eval functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn eval
+  ([^Context ctx ^Source src]
+   ^Value (.eval ctx src))
+  ([^Context ctx ^String lang ^String code]
+   ^Value (.eval ctx lang code)))
+
+(defn eval-parse
+  ([^Context ctx ^Source src]
+   (value->clj (eval ctx src)))
+  ([^Context ctx ^String lang ^String code]
+   (value->clj (eval ctx lang code))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Source functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn source
+  ([f]
+   ^Source (if-let [lang (-> f io/file Source/findLanguage)]
+             (source f lang)
+             (throw (str "Trouble detecting language for file " f))))
+  ([f ^String lang]
+   ^Source (->> f
+                io/file
+                (Source/newBuilder lang)
+                .build)))
