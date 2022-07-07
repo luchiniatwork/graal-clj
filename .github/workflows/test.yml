@@ -1,0 +1,69 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+      - ci
+
+jobs:
+
+  test:
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        gu-binary: [gu, gu.cmd]
+        exclude:
+          - os: ubuntu-latest
+            gu-binary: gu.cmd
+          - os: macos-latest
+            gu-binary: gu.cmd
+          - os: windows-latest
+            gu-binary: gu
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Graalvm
+        id: setup-graalvm
+        uses: DeLaGuardo/setup-graalvm@master
+        with:
+          # GraalVM version, no pattern syntax available atm
+          graalvm: '22.1.0'
+          # Java version, optional, defaults to 'java8'. Available options are 'java8' and 'java11'.
+          java: 'java11'
+          # Architecture flag, optional, defaults to 'amd64'. Available options are 'amd64' and 'aarch64'. Later is available only for linux runners.
+          arch: 'amd64'
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          cache: 'npm'
+          cache-dependency-path: test/js/package-lock.json
+
+      - name: Install npm packages
+        working-directory: test/js
+        run: npm install
+
+      - name: Bundle test dependency
+        working-directory: test/js
+        run: npx webpack
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@3.7
+        with:
+          cli: 1.11.1.1113
+
+      - name: Execute clojure code on Linux and MacOS
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: clojure -X:test
+        shell: bash
+
+      - name: Execute clojure code on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: clojure -X:test
+        shell: powershell
