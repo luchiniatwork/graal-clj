@@ -5,7 +5,7 @@
 [license]: #license
 
 [clojars-badge]: https://img.shields.io/clojars/v/luchiniatwork/graal-clj.svg
-[clojars]: http://clojars.org/luchiniatwork/graal-clj
+[clojars]: http://clojars.org/net.clojars.luchiniatwork/graal-clj
 
 [status-badge]: https://img.shields.io/badge/project%20status-experimental-yellow.svg
 [ci-badge]: https://github.com/luchiniatwork/graal-clj/actions/workflows/test.yml/badge.svg
@@ -13,6 +13,7 @@
 # graal-clj
 
 [![Clojars][clojars-badge]][clojars]
+[![CI Status][ci-badge]
 [![License][license-badge]][license]
 ![Status][status-badge]
 
