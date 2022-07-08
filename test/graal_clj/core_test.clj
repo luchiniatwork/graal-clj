@@ -180,7 +180,7 @@ var myArray = [4, 5, 6];
 
 
 (deftest bindings-and-members
-  (let [top-level (core/get-bindings *context-cap-stdout* "js")]
+  (let [top-level (core/get-bindings *context* "js")]
     ;; no list
     (is (= []
            (core/member-keys top-level)))
@@ -189,7 +189,7 @@ var myArray = [4, 5, 6];
            (core/has-member? top-level "a")))
 
     ;; add a
-    (*eval-parse-cap-stdout* "const a = {\"foo\":5, \"bar\":null}; const b = 2;")
+    (*eval-parse* "const a = {\"foo\":5, \"bar\":null}; const b = 2;")
 
     ;; top level now has members
     (is (= true
@@ -240,15 +240,15 @@ var myArray = [4, 5, 6];
   (testing "sourcing a file"
     (let [doubler (->> "test/js/src/doubler.js"
                        core/source
-                       (core/eval-parse *context-cap-stdout*))]
+                       (core/eval-parse *context*))]
       (is (= 12 (doubler 6)))))
 
   (testing "can see global sourced above"
-    (is (= true (-> *context-cap-stdout*
+    (is (= true (-> *context*
                     (core/get-bindings "js")
                     (core/has-member? "fooBar"))))
     (is (= {"foo" "bar"}
-           (-> *context-cap-stdout*
+           (-> *context*
                (core/get-bindings "js")
                (core/get-member "fooBar")
                core/value->clj))))
@@ -271,3 +271,43 @@ const _ = require('lodash');")
       (is (= [[1 3 5 7 9] [0 2 4 6 8]]
              (f (range 10)
                 (core/proxy-fn odd?)))))))
+
+
+(deftest promises
+  (testing "promise excuction in clj"
+    (core/put-member (core/get-bindings *context-cap-stdout* "js")
+                     "myPromise"
+                     (core/proxy-fn (fn [resolve reject]
+                                      (resolve 42))))
+    (*eval-parse-cap-stdout* "new Promise(myPromise).then(x => { console.log(2 * x); })")  
+    (is (= "84\n" (.toString *context-stout*))))
+
+  (testing "promise treatment in clj"
+    (let [result (atom 0)]
+      (core/put-member (core/get-bindings *context-cap-stdout* "js")
+                       "myThen"
+                       (core/proxy-fn (fn [v] (reset! result (* 2 v)))))
+      (*eval-parse-cap-stdout* "Promise.resolve(42).then(myThen);")
+      (is (= 84 @result)))))
+
+
+(deftest async-fn
+  (testing "calling clj async function from js"
+    (core/put-member (core/get-bindings *context-cap-stdout* "js")
+                     "myAsync"
+                     (core/async-fn (fn [resolve reject]
+                                      (resolve (range 5)))))
+    (let [f (*eval-parse-cap-stdout* "
+(async function() {
+  let x = await myAsync;
+  console.log (x);
+})")]
+      (f))
+    (is (= "0,1,2,3,4\n" (.toString *context-stout*))))
+
+  (testing "calling js async function from clj"
+    (let [f (*eval-parse-cap-stdout* "
+(async function() {
+  return 42;
+})")]
+      (is (= 42 (f))))))
