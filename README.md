@@ -4,7 +4,7 @@
 [license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license]: #license
 
-[clojars-badge]: https://img.shields.io/clojars/v/luchiniatwork/graal-clj.svg
+[clojars-badge]: https://img.shields.io/clojars/v/net.clojars.luchiniatwork/graal-clj.svg
 [clojars]: http://clojars.org/net.clojars.luchiniatwork/graal-clj
 
 [status-badge]: https://img.shields.io/badge/project%20status-experimental-yellow.svg
