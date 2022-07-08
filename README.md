@@ -15,9 +15,8 @@
 # graal-clj
 
 [![Clojars][clojars-badge]][clojars]
-[![CIStatus][ci-badge][ci]
+[![CI Status][ci-badge]][ci]
 [![License][license-badge]][license]
-
 ![Status][status-badge]
 
 `graal-clj` is a simple wrapper and a collection of tools to make
