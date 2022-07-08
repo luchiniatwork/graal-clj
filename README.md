@@ -7,14 +7,17 @@
 [clojars-badge]: https://img.shields.io/clojars/v/net.clojars.luchiniatwork/graal-clj.svg
 [clojars]: http://clojars.org/net.clojars.luchiniatwork/graal-clj
 
-[status-badge]: https://img.shields.io/badge/project%20status-experimental-yellow.svg
 [ci-badge]: https://github.com/luchiniatwork/graal-clj/actions/workflows/test.yml/badge.svg
+[ci]: https://github.com/luchiniatwork/graal-clj/actions/workflows/test.yml
+
+[status-badge]: https://img.shields.io/badge/project%20status-experimental-yellow.svg
 
 # graal-clj
 
 [![Clojars][clojars-badge]][clojars]
-[![CI Status][ci-badge]
+[![CIStatus][ci-badge][ci]
 [![License][license-badge]][license]
+
 ![Status][status-badge]
 
 `graal-clj` is a simple wrapper and a collection of tools to make
