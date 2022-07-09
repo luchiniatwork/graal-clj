@@ -1,6 +1,7 @@
 [polyglot]: https://www.graalvm.org/22.1/reference-manual/polyglot-programming/
 [gu]: https://www.graalvm.org/22.1/reference-manual/graalvm-updater/
 [core-shims]: https://github.com/parshap/node-libs-react-native#globals
+[graal-vm]: https://www.graalvm.org/22.1/docs/getting-started/
 
 [license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license]: #license
@@ -50,21 +51,24 @@ should not be considered production-ready.
 
 `graal-clj` depends on Graal's classes but does not carry them as
 dependencies. The rational is that you can either have your Clojure
-code running as on top of Graal's VM (highly recommended) or, if you
-are on another JVM, you can use Graal's Polyglot as a dependency you
-add to your project.
+code running as on top of [Graal's VM (highly recommended)][graal-vm]
+or, if you are on another JVM, you can use Graal's Polyglot as a
+dependency you add to your project.
 
 In both cases, you will need to make sure you have the runtime for the
 language you intend to use. In the Graal's VM case you will use
-Graal's `gu` [tool][gu] to install runtimes while in the library case
-you bring the runtime as an extra dependency like you see below on
-your `deps.edn` file. This would give you access to the `js` runtime.
+Graal's `gu` [tool][gu] to install runtimes; in the library case you
+will habe to bring the runtime as an extra dependency like you see
+below on your `deps.edn` file. This would give you access to the `js`
+runtime.
 
 ``` clojure
 {:deps {org.graalvm.sdk/graal-sdk       {:mvn/version "22.1.0"}
         org.graalvm.truffle/truffle-api {:mvn/version "22.1.0"}
         org.graalvm.js/js               {:mvn/version "22.1.0"}}}
 ```
+
+*ATT*: the above is not needed if you are using the [Graal VM][graal-vm].q
 
 Also make sure to add `graal-clj` to your `deps.edn` file or equivalent:
 
