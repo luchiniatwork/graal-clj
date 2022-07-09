@@ -1,10 +1,16 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/index.js',
-  mode: 'production',
+  entry: {
+    main: './src/index.js',
+    process: './src/process.js',
+  },
+  mode: 'development',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.js',
+    filename: '[name]-bundle.js',
+    library: ["MyLibrary", "[name]"],
+    libraryTarget: "umd",
+    globalObject: 'this'
   }
 };

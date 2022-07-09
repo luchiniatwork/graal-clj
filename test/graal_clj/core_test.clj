@@ -236,7 +236,7 @@ var myArray = [4, 5, 6];
                core/value->clj)))))
 
 
-(deftest use-source-and-npm-packages
+(deftest use-source
   (testing "sourcing a file"
     (let [doubler (->> "test/js/src/doubler.js"
                        core/source
@@ -254,13 +254,13 @@ var myArray = [4, 5, 6];
                core/value->clj))))
 
   (testing "sourcing a bundle that also uses a library"
-    (->> "test/js/dist/bundle.js"
+    (->> "test/js/dist/main-bundle.js"
          core/source
          (core/eval-parse *context-cap-stdout*))
-    (*eval-parse-cap-stdout* "const a = 5;")
     (is (= "pending\nresolved\nHello World!\n"
-           (.toString *context-stout*))))
+           (.toString *context-stout*)))))
 
+(deftest using-npm-packages-directly
   (testing "loading npm packages"
     (*eval-parse-cap-stdout* "
 const _ = require('lodash');")
@@ -270,8 +270,57 @@ const _ = require('lodash');")
                 core/value->clj)]
       (is (= [[1 3 5 7 9] [0 2 4 6 8]]
              (f (range 10)
-                (core/proxy-fn odd?)))))))
+                (core/proxy-fn odd?))))))
 
+  (testing "trying to load a npm that requires process and fails"
+    (is (thrown? org.graalvm.polyglot.PolyglotException
+                 (*eval-parse-cap-stdout* "const xstate-fail = require('xstate');"))))
+
+  (testing "loading a npm that requires shimmed process"
+    (core/eval *context-cap-stdout* "js" "
+const process = require('./dist/process-bundle.js');
+const xstate = require('xstate');")
+
+    (core/eval *context-cap-stdout* "js" "
+const promiseMachine = xstate.createMachine({
+  id: 'promise',
+  initial: 'pending',
+  states: {
+    pending: {
+      on: {
+        RESOLVE: { target: 'resolved' },
+        REJECT: { target: 'rejected' }
+      }
+    },
+    resolved: {
+      type: 'final'
+    },
+    rejected: {
+      type: 'final'
+    }
+  }
+});
+
+const promiseService = xstate.interpret(promiseMachine).onTransition((state) =>
+  console.log(state.value)
+);
+
+// Start the service
+promiseService.start();
+// => 'pending'
+
+promiseService.send({ type: 'RESOLVE' });
+// => 'resolved'
+")
+
+    (is (= "pending\nresolved\n"
+           (.toString *context-stout*)))
+    (is (= true
+           (core/has-member? (core/get-bindings *context-cap-stdout* "js")
+                             "process")))
+    (is (= true
+           (core/has-member? (core/get-bindings *context-cap-stdout* "js")
+                             "xstate")))))
 
 (deftest promises
   (testing "promise excuction in clj"
