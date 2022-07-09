@@ -1,5 +1,6 @@
 [polyglot]: https://www.graalvm.org/22.1/reference-manual/polyglot-programming/
 [gu]: https://www.graalvm.org/22.1/reference-manual/graalvm-updater/
+[core-shims]: https://github.com/parshap/node-libs-react-native#globals
 
 [license-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license]: #license
@@ -152,6 +153,13 @@ function that does exactly that:
 (graal/eval-parse ctx "js" "(x) => x * 2;") ;;=> [a callable clojure fn]
 ```
 
+`value->clj` is an expensive and eager recursive function. You should
+limit yourself to using it just when you really need it. The function
+is limited to a depth of 10 nested members by default (in practice, it
+will throw an exception before triggering a stack overflow
+exception). You can bump this limit up to whatever you need by
+re-binding `*max-parsing-depth*`.
+
 Another useful pattern is to use `partial` if you'll be calling the
 runtime a few times in your code. Full example:
 
@@ -234,7 +242,29 @@ like this:
 (graal/eval "Promise.resolve(42).then(myThen);") ;; => 84
 ```
 
-TBD async functions
+JavaScript's `async/await` is fully supported. Calling an async
+function is the same as calling any other function (and can be
+interpreted as a promise - above).
+
+If you want to call a Clojure function as a JavaScript async function
+with `await`, you'll need to wrap the Clojure function with the
+`async-fn` function. Say you have the following JavaScript function
+and that `myAsync` is a Clojure function you will inject via
+`put-member` (see respective section):
+
+``` javascript
+async function() {
+  let x = await myAsync;
+  console.log (x);
+}
+```
+
+Then you wrap the clojure function up when putting it like this:
+
+``` clojure
+(graal/async-fn (fn [resolve reject]
+  (resolve 42)))
+```
 
 ## Using bundles and Node packages
 
@@ -293,6 +323,17 @@ could use its `partition` function like so:
 The interesting bit about the `parition` function is that it takes a
 `pred` function to decide how to partition and we are sending
 Clojure's `odd?` function to do its thing (wrapped by `proxy-fn`).
+
+## Dealing with Node core modules
+
+Graal's JavaScript runtime does not carry Node JS's core modules (such
+as `process`, `http`, `fs`, etc.) This might make some packages
+challenging to use if you don't shim those modules in.
+
+Luckly, the JavaScript community is constantly hacking shims and mocks
+for these modules. A good list can be found [here][core-shims].
+
+Do refer to `graal-clj`'s unit tests for examples.
 
 ## Running Tests
 

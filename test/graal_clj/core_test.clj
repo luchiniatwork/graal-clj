@@ -1,6 +1,6 @@
 (ns graal-clj.core-test
   (:require [graal-clj.core :as core]
-            [clojure.test :refer :all])
+            [clojure.test :as t :refer :all])
   (:import (java.io ByteArrayOutputStream)
            (org.graalvm.polyglot Context)))
 
@@ -14,13 +14,31 @@
 
 (def ^:dynamic *context-stout* nil)
 
+
+(defmethod t/assert-expr 'thrown-with-data? [msg form]
+  (let [data (second form)
+        body (nthnext form 2)]
+    `(try ~@body
+          (do-report {:type :fail, :message ~msg,
+                      :expected '~form, :actual nil})
+          (catch clojure.lang.ExceptionInfo e#
+            (let [expected# ~data
+                  actual# (ex-data e#)]
+              (if (= expected# actual#)
+                (do-report {:type :pass, :message ~msg,
+                            :expected expected#, :actual actual#})
+                (do-report {:type :fail, :message ~msg,
+                            :expected expected#, :actual actual#})))
+            e#))))
+
 (defn context-fixture [f]
   (let [out-stream (ByteArrayOutputStream.)]
     (core/with-context [ctx (core/create-context "js")
                         ctx-cap-stdout (core/context-from-builder
                                         (doto (Context/newBuilder (into-array ["js"]))
                                           (.out out-stream)
-                                          (core/apply-builder-defaults {"js.commonjs-require-cwd"      "test/js"})))]
+                                          (core/apply-builder-defaults
+                                           {"js.commonjs-require-cwd" "test/js"})))]
 
       (binding [*context* ctx
                 *context-cap-stdout* ctx-cap-stdout
@@ -260,6 +278,7 @@ var myArray = [4, 5, 6];
     (is (= "pending\nresolved\nHello World!\n"
            (.toString *context-stout*)))))
 
+
 (deftest using-npm-packages-directly
   (testing "loading npm packages"
     (*eval-parse-cap-stdout* "
@@ -321,6 +340,35 @@ promiseService.send({ type: 'RESOLVE' });
     (is (= true
            (core/has-member? (core/get-bindings *context-cap-stdout* "js")
                              "xstate")))))
+
+
+(deftest parse-depth-limit
+  (is (thrown-with-data? {:depth 10}
+                         (*eval-parse-cap-stdout* "
+const process = require('./dist/process-bundle.js');
+const xstate = require('xstate');
+
+// this returns a pretty deep and big object
+xstate.interpret(xstate.createMachine({
+  id: 'machine',
+  initial: 'pending',
+  states: {
+    pending: {},
+  },
+}));")))
+
+  (is (thrown-with-data? {:depth 5}
+                         (binding [core/*max-parsing-depth* 5]
+                           (*eval-parse-cap-stdout* "
+// this returns a pretty deep and big object
+xstate.interpret(xstate.createMachine({
+  id: 'machine',
+  initial: 'pending',
+  states: {
+    pending: {},
+  },
+}));")))))
+
 
 (deftest promises
   (testing "promise excuction in clj"

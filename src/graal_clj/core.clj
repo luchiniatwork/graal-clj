@@ -13,6 +13,9 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:dynamic *max-parsing-depth* 10)
+
+(def ^:dynamic *parsing-depth* 0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Core functions
@@ -85,6 +88,9 @@
   "Returns a Clojure (or Java) value for given polyglot Value if possible,
    otherwise throws."
   [^Value v]
+  (when (> *parsing-depth* *max-parsing-depth*)
+    (throw (ex-info "Too deep an object. Change *max-parsing-depth* if you really know what you are doing."
+                    {:depth *max-parsing-depth*})))
   (when (not (nil? v))
     (cond
       (.isNull v) nil
@@ -96,9 +102,10 @@
       (.hasArrayElements v) (into []
                                   (for [i (range (.getArraySize v))]
                                     (value->clj (.getArrayElement v i))))
-      (.hasMembers v) (into {}
-                            (for [k (.getMemberKeys v)]
-                              [k (value->clj (.getMember v k))]))
+      (.hasMembers v) (binding [*parsing-depth* (inc *parsing-depth*)]
+                        (into {}
+                              (for [k (.getMemberKeys v)]
+                                [k (value->clj (.getMember v k))])))
       :else (throw (Exception. "Unsupported value")))))
 
 
