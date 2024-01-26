@@ -1,24 +1,25 @@
 {:paths ["src"]
- :aliases {:test
-           {:extra-deps {lambdaisland/kaocha {:mvn/version "1.68.1059"}}
-            :exec-fn kaocha.runner/exec-fn
-            :exec-args {}}
+ :aliases
+ {:test
+  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.68.1059"}}
+   :exec-fn kaocha.runner/exec-fn
+   :exec-args {}}
 
-           :test-with-dep
-           {:extra-deps {lambdaisland/kaocha {:mvn/version "1.68.1059"}
-                         org.graalvm.sdk/graal-sdk {:mvn/version "22.1.0"}
-                         org.graalvm.truffle/truffle-api {:mvn/version "22.1.0"}
-                         org.graalvm.js/js {:mvn/version "22.1.0"}}
-            :exec-fn kaocha.runner/exec-fn
-            :exec-args {}}
+  :test-with-dep
+  {:extra-deps {lambdaisland/kaocha {:mvn/version "1.68.1059"}
+                org.graalvm.sdk/graal-sdk {:mvn/version "22.1.0"}
+                org.graalvm.truffle/truffle-api {:mvn/version "22.1.0"}
+                org.graalvm.js/js {:mvn/version "22.1.0"}}
+   :exec-fn kaocha.runner/exec-fn
+   :exec-args {}}
 
-           :depstar
-           {:replace-deps
-            {com.github.seancorfield/depstar {:mvn/version "2.0.206"}}
-            :ns-default hf.depstar
-            :exec-fn hf.depstar/uberjar
-            :exec-args {
-                        :jar app.jar
-                        :aot true
-                        :compile-ns [my.app]
-                        :main-class "my.app"}}}}
+  :depstar
+  {:replace-deps
+   {com.github.seancorfield/depstar {:mvn/version "2.0.206"}}
+   :ns-default hf.depstar
+   :exec-fn hf.depstar/uberjar
+   :exec-args {
+               :jar app.jar
+               :aot true
+               :compile-ns [my.app]
+               :main-class "my.app"}}}}

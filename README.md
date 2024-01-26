@@ -68,7 +68,7 @@ runtime.
         org.graalvm.js/js               {:mvn/version "22.1.0"}}}
 ```
 
-*ATT*: the above is not needed if you are using the [Graal VM][graal-vm].q
+*ATT*: the above is not needed if you are using the [Graal VM][graal-vm].
 
 Also make sure to add `graal-clj` to your `deps.edn` file or equivalent:
 
